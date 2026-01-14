@@ -37,7 +37,7 @@ El flujo de facturación consta de tres etapas principales:
 - **Lenguaje**: TypeScript
 - **Autenticación**: AWS Cognito (real o mock para desarrollo)
 
-### Frontend
+### Frontend(Optional - Client Side Rendering)
 - **Framework**: React (puede usar cualquier herramienta de build)
 - **Lenguaje**: TypeScript
 - **Estado**: A elección del candidato (Redux, Zustand, Context API, etc.)
@@ -215,6 +215,9 @@ El candidato debe incluir en el README una sección explicando:
   - Por qué se realizan esos cambios
   - Impacto en los datos existentes (si aplica)
 - **Seeds**: Explicar qué datos de ejemplo se incluyen y cómo ejecutarlos
+
+Implementar las migraciones de base de datos como un **servicio separado** en Docker Compose que se ejecute automáticamente antes del servicio principal.
+
 - **Datos de prueba**: Los seeds deben incluir datos suficientes para probar todos los flujos del sistema
 
 ### 8. Mejoras Futuras
