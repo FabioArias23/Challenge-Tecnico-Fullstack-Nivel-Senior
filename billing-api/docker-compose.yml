@@ -1,9 +1,12 @@
+version: '3.8'
+
 services:
+  # 1. Base de Datos
   postgres:
     image: postgres:14.4-alpine
     container_name: billing_challenge_db
     ports:
-      - "5434:5432"
+      - "5434:5432" # Expuesto al host en 5434 por si quieres ver la DB localmente
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -18,29 +21,50 @@ services:
       timeout: 5s
       retries: 5
 
+  # 2. Redis (Para las Colas)
+  redis:
+    image: redis:alpine
+    container_name: billing_challenge_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - billing_network
+
+  # 3. La API (NestJS)
   api:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: billing_challenge_api
     ports:
-      - "3057:3000"
-    env_file:
-      - .env
+      - "3000:3000"
+    environment:
+      # OJO: Aquí usamos los nombres de los servicios (postgres, redis) como hosts
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_DATABASE=billing_challenge
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=super_secret_key_change_me
+      - JWT_EXPIRES_IN=24h
+      - NODE_ENV=development
     volumes:
-      - ./src:/app/src
-      - node_modules:/app/node_modules
+      - .:/app
+      - /app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - billing_network
-    command: npm run start:dev
+    # Comando: Ejecuta migraciones y luego arranca
+    command: sh -c "npm run typeorm:run && npm run start:dev"
 
 volumes:
   postgres_data:
-    driver: local
-  node_modules:
     driver: local
 
 networks:
