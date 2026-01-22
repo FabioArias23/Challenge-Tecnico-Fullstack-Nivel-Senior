@@ -12,7 +12,7 @@
 
 ## 📌 Descripción General
 
-> **Challenge técnico de Backend (nivel Senior)** enfocado en arquitectura, consistencia de datos, manejo de concurrencia y procesamiento asíncrono, simulando escenarios reales de producción.
+> **Challenge técnico de FullStack (nivel Senior orientado a Backend)** enfocado en arquitectura, consistencia de datos, manejo de concurrencia y procesamiento asíncrono, simulando escenarios reales de producción.
 
 El objetivo principal de esta solución es diseñar un sistema robusto y escalable para la **facturación de servicios logísticos**, priorizando la integridad transaccional, la correcta separación de dominios y la preparación para integraciones externas (ERP).
 
@@ -272,7 +272,24 @@ npm run start:dev
 ```
 
 ---
+# 🔑 Credenciales de Acceso
 
+El sistema utiliza un **Mock de Autenticación** (simulando AWS Cognito) para facilitar las pruebas locales sin requerir configuración de nube externa.
+
+Puede utilizar las siguientes credenciales para probar tanto la API (Swagger/Postman) como el Frontend:
+
+| Rol | Usuario | Contraseña |
+|-----|---------|------------|
+| **Administrador** | `admin` | `123` |
+
+En la API en PostMan 
+
+{
+    "username": "fabio",
+    "password": "password123"
+}
+
+> **Nota:** Al ser un mock de desarrollo, el backend aceptará cualquier combinación de usuario/contraseña que no esté vacía, pero se recomienda utilizar las credenciales sugeridas para mantener la consistencia con los logs de auditoría.
 ## 📡 Endpoints Principales
 
 ```http
