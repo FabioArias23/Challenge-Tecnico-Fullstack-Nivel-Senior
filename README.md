@@ -1,73 +1,75 @@
-# 🚀 Technical Challenge – Senior Level
+# 🚀 Challenge Técnico – Nivel Senior
 
 <p align="center">
-  <img src="https://img.shields.io/badge/level-senior-blue" />
+  <img src="https://img.shields.io/badge/nivel-senior-blue" />
   <img src="https://img.shields.io/badge/backend-node.js-green" />
   <img src="https://img.shields.io/badge/framework-nestjs-red" />
   <img src="https://img.shields.io/badge/database-postgresql-blue" />
   <img src="https://img.shields.io/badge/queue-bullmq-orange" />
 </p>
 
+---
 
-## 📌 Overview
+## 📌 Descripción General
 
-> **Senior Backend Technical Challenge** focused on architecture, data integrity, concurrency control, and asynchronous processing.
+> **Challenge técnico de Backend (nivel Senior)** enfocado en arquitectura, consistencia de datos, manejo de concurrencia y procesamiento asíncrono, simulando escenarios reales de producción.
 
-Este repositorio contiene la solución a un **challenge técnico de nivel Senior**, con foco en **arquitectura backend**, **consistencia de datos**, **procesamiento asíncrono** y **preparación para entornos productivos reales**.
-
-El objetivo principal fue diseñar un sistema robusto y escalable para la **facturación de servicios logísticos**, priorizando la integridad transaccional y la correcta separación de responsabilidades por dominio.
+El objetivo principal de esta solución es diseñar un sistema robusto y escalable para la **facturación de servicios logísticos**, priorizando la integridad transaccional, la correcta separación de dominios y la preparación para integraciones externas (ERP).
 
 ---
 
-## 🧠 Design Principles
+## 🧠 Principios de Diseño
 
-- **Domain-Driven Design (DDD)**
-- **Separación estricta de dominios**
-- **Idempotencia y manejo de concurrencia**
-- **Procesamiento asíncrono orientado a eventos**
-- **Arquitectura preparada para escalar**
+- Domain-Driven Design (DDD)
+- Separación estricta de responsabilidades por dominio
+- Idempotencia en procesos críticos
+- Manejo explícito de concurrencia
+- Procesamiento asíncrono orientado a eventos
+- Arquitectura preparada para entornos productivos
 
 ---
 
-## 📚 Architecture & Design Documentation
+## 📚 Documentación de Diseño y Arquitectura
 
 <details>
-<summary><strong>Click to expand technical details</strong></summary>
+<summary><strong>Ver decisiones técnicas y de arquitectura</strong></summary>
 
+### 1. Decisiones de Modelado (Domain-Driven Design)
 
-
-### 1. Decisiones de Modelado (DDD)
-
-Se definieron dominios claramente desacoplados para evitar dependencias implícitas y contaminación de responsabilidades.
+Se optó por separar estrictamente el **Dominio de Logística** del **Dominio de Facturación**, evitando acoplamiento y contaminación de responsabilidades.
 
 #### 🧱 Dominio de Logística
+
 **Entidad: `Service`**
-- Maneja exclusivamente estados operativos:
+
+- Maneja únicamente estados operativos:
   - `PENDING`
   - `IN_TRANSIT`
   - `DELIVERED`
-- **Decisión clave**: un servicio no conoce si fue facturado.
-- Su responsabilidad finaliza una vez entregado.
+- Un servicio **no conoce si fue facturado o no**.
+- Su responsabilidad finaliza al momento de la entrega.
 
 #### 💰 Dominio de Facturación
-**Entidad: `BillingPending` (Nexo)**
-- Representa un **snapshot inmutable** del servicio al momento de generar el pendiente.
-- Se copia el `amount` desde Logística.
 
-**Motivación**:
-Si Logística modifica tarifas posteriormente, la contabilidad histórica no debe verse afectada.
+**Entidad: `BillingPending` (Nexo)**
+
+- Representa un **snapshot inmutable** del servicio al momento de generar un pendiente de facturación.
+- Se copia el valor `amount` desde Logística.
+
+**Justificación**:
+Si la tarifa del servicio cambia posteriormente en Logística, la contabilidad histórica no debe verse afectada.
 
 **Relación**:
 - `Service (1) → (N) BillingPending`
-- Permite futuras re-facturaciones o ajustes sin romper el modelo.
+- Permite re-facturaciones o ajustes futuros sin romper el modelo.
 
 ---
 
 ### 2. Concurrencia e Idempotencia
 
-En escenarios de facturación masiva, múltiples procesos pueden intentar facturar los mismos registros.
+En procesos de facturación masiva, es común que múltiples procesos intenten facturar los mismos registros.
 
-#### 🔒 Estrategia: Pessimistic Locking
+#### 🔒 Estrategia de Bloqueo (Pessimistic Locking)
 
 ```ts
 queryRunner.manager.find(Entity, {
@@ -79,48 +81,48 @@ queryRunner.manager.find(Entity, {
 - La base de datos bloquea físicamente las filas seleccionadas.
 - Otros procesos deben esperar a que la transacción finalice.
 
-#### ♻️ Idempotencia
+#### ♻️ Idempotencia del Proceso
+
 - Dentro de la transacción se valida estrictamente:
   - `status === 'PENDING'`
-- Si otro proceso ya facturó el registro, el segundo request falla inmediatamente.
+- Si otro proceso ya modificó el estado a `INVOICED`, el segundo intento falla inmediatamente.
 
 ---
 
 ### 3. Alcance del Challenge
 
-- Se priorizó **robustez backend** sobre estética frontend.
-- Enfoque en:
+- Se priorizó la **robustez del Backend** por sobre la estética del Frontend.
+- El foco estuvo en:
   - Transacciones complejas
-  - Procesamiento asíncrono
   - Integridad de datos
+  - Procesamiento asíncrono
 
 #### 🔐 Autenticación
-- AWS Cognito fue **mockeado**.
+
+- La autenticación con AWS Cognito fue **simulada (mock)**.
 - Se mantuvo la estructura real de:
   - Guards
-  - JWT Strategies
+  - Strategies JWT
 
-Esto permite un switch inmediato a un proveedor real sin refactor estructural.
+Esto permite un reemplazo inmediato por un proveedor real sin refactor estructural.
 
 ---
 
 ### 4. Preparación de Datos para ERP
 
-Se implementó un endpoint de exportación:
+Se diseñó una salida JSON estandarizada y agnóstica mediante el endpoint:
 
 ```http
 GET /billing/batch/:id/erp-export
 ```
 
-#### 📦 Payload JSON Estandarizado
+#### 📦 Campos Clave
 
-Campos clave:
-- `external_id`: ID interno para evitar duplicados en el ERP.
+- `external_id`: ID interno enviado al ERP para evitar duplicados (idempotencia del lado del ERP).
 - `tax_breakdown`: desglose impositivo (IVA 21%).
 
 **Decisión de negocio**:
-El sistema de facturación es el dueño de la regla impositiva.
-El ERP solo asienta contabilidad, evitando recalcular y generar diferencias por redondeo.
+El sistema de facturación es el dueño de la regla impositiva vigente. El ERP solo debe asentar contabilidad, evitando recálculos y diferencias por redondeo.
 
 ---
 
@@ -129,41 +131,45 @@ El ERP solo asienta contabilidad, evitando recalcular y generar diferencias por 
 Para evitar timeouts en lotes grandes, se implementó una arquitectura basada en jobs.
 
 #### 🧰 Tecnología
+
 - **BullMQ + Redis**
 
 **Justificación**:
 - Integración nativa con Node/NestJS
-- Menor overhead operativo que RabbitMQ para job queues
+- Menor overhead operativo que RabbitMQ para este caso de uso
 
-#### 🔄 Flujo
-1. API recibe request
-2. Valida DTO
-3. Encola el job (`billing-queue`)
+#### 🔄 Flujo de Procesamiento
+
+1. La API recibe el request
+2. Valida el DTO
+3. Encola el trabajo (`billing-queue`)
 4. Retorna `202 Accepted`
-5. Worker (`BillingProcessor`) procesa en background
+5. Un worker (`BillingProcessor`) procesa el job en segundo plano
 
 #### ⚠️ Manejo de Errores
+
 - `attempts: 3`
 - `backoff: 5000ms`
-- Rollback completo ante error
+- Rollback completo ante fallos transaccionales
 - Reintentos automáticos gestionados por BullMQ
 
 ---
 
 ### 6. Migraciones y Seeds
 
-La base de datos se gestiona **exclusivamente por código**.
+La integridad de la base de datos se gestiona **exclusivamente mediante código**.
 
 #### 🗄️ Migraciones (TypeORM)
+
 - `synchronize: false`
 - Migración inicial: `InitFullSchema`
-- Incluye:
+- Creación de:
   - Tablas
   - ENUMs
   - Relaciones
 
 **Automatización**:
-- `docker-compose.yml` ejecuta migraciones antes de levantar la API
+- `docker-compose.yml` ejecuta las migraciones antes de levantar la API
 
 #### 🌱 Seeds
 
@@ -173,70 +179,101 @@ POST /seed
 ```
 
 Funcionalidad:
-- Limpieza ordenada respetando Foreign Keys
-- Generación de:
-  - 50 servicios
-  - Estados aleatorios (`DELIVERED`, `IN_TRANSIT`)
-  - Fechas distribuidas para pruebas de carga
+- Limpieza de la base respetando claves foráneas
+- Generación de 50 servicios
+- Estados aleatorios (`DELIVERED`, `IN_TRANSIT`)
+- Fechas distribuidas para pruebas de carga y filtrado
 
 ---
 
 ### 7. Mejoras Futuras
 
 #### 🛠️ Técnicas
-- **Dead Letter Queue (DLQ)**: manejo de jobs fallidos tras reintentos
-- **Circuit Breaker**: protección ante fallos del ERP
-- **Testing E2E**: Supertest para flujos HTTP completos
+
+- Dead Letter Queue (DLQ) para jobs fallidos
+- Circuit Breaker para integración con ERP
+- Testing E2E con Supertest
 
 #### 📈 De Negocio
-- **Notas de Crédito**: anulación de facturas
-- **Integración AFIP real**: reemplazo del mock de CAE
-- **Multi-moneda**: soporte USD con tipo de cambio al momento de emisión
 
----
+- Notas de crédito
+- Integración real con AFIP (facturación electrónica)
+- Soporte multi-moneda (USD con tipo de cambio al momento de emisión)
 
 </details>
 
-## ✅ Conclusion
+---
 
-La solución prioriza estándares de calidad propios de un entorno productivo real, con foco en **escalabilidad**, **consistencia**, **observabilidad** y **mantenibilidad**, alineados a expectativas de un **rol Senior Backend**.
+## ⚙️ Stack Tecnológico
+
+- Node.js / TypeScript
+- NestJS
+- TypeORM
+- PostgreSQL
+- BullMQ + Redis
+- Docker & Docker Compose
 
 ---
 
-📌 _This project was designed as a technical challenge but follows standards directly applicable to real-world, mission-critical enterprise systems._
+## 🧪 Ejecución Local
 
----
-
-## ⚙️ Tech Stack
-
-- **Node.js / TypeScript**
-- **NestJS** (Modular Architecture)
-- **TypeORM** (Transactions & Migrations)
-- **PostgreSQL**
-- **BullMQ + Redis** (Asynchronous Processing)
-- **Docker & Docker Compose**
-
----
-
-## 🧪 Local Setup
+### Backend
 
 ```bash
-# Install dependencies
+# Instalar dependencias
 npm install
 
-# Start infrastructure (DB + Redis)
+# Levantar infraestructura (DB + Redis)
 docker-compose up -d
 
-# Run migrations
+# Ejecutar migraciones
 npm run typeorm:run
 
-# Start API
+# Iniciar la API
+npm run start:dev
+```
+
+### Frontend
+
+```bash
+# Instalar dependencias
+npm install
+
+# Levantar aplicación Frontend
+npm run start
+```
+
+### Tests Unitarios
+
+```bash
+# Ejecutar todos los tests unitarios
+npm run test
+
+# Ejecutar tests uno por uno
+npm run test src/billing/billing.service.spec.ts
+npm run test src/billing/billing.processor.spec.ts
+npm run test src/auth/strategies/jwt.strategy.spec.ts
+
+
+```
+
+```bash
+# Instalar dependencias
+npm install
+
+# Levantar infraestructura (DB + Redis)
+docker-compose up -d
+
+# Ejecutar migraciones
+npm run typeorm:run
+
+# Iniciar la API
 npm run start:dev
 ```
 
 ---
 
-## 📡 Key Endpoints
+## 📡 Endpoints Principales
 
 ```http
 POST   /billing/batch
@@ -247,22 +284,25 @@ POST   /seed
 
 ---
 
-## 📈 Production Readiness Highlights
+## 📈 Aspectos Clave para Producción
 
-- Transactional integrity with rollback guarantees
-- Pessimistic locking for race-condition prevention
-- Fully idempotent billing process
-- Async job processing with retries and backoff
-- Database schema managed exclusively via migrations
-- Clear domain boundaries aligned with DDD principles
+- Integridad transaccional con garantías de rollback
+- Bloqueo pesimista para prevenir condiciones de carrera
+- Proceso de facturación completamente idempotente
+- Procesamiento asíncrono con reintentos y backoff configurado
+- Esquema de base de datos gestionado exclusivamente mediante migraciones
+- Límites de dominio claramente definidos y alineados a principios DDD
 
 ---
 
-## 👤 Author
+## 👤 Autor
 
-**Fabio Arias**  
-Senior Backend Developer  
+**Fabio Adrian Arias**  
+Senior FullStack Developer
 
-🔗 LinkedIn: _(add link)_  
-📧 Email: _(add contact)_
+🔗 LinkedIn: https://www.linkedin.com/in/fabio-arias-0515691b9/
+
+---
+
+📌 _Este proyecto fue desarrollado como un challenge técnico, aplicando criterios y estándares propios de sistemas empresariales en producción._
 
