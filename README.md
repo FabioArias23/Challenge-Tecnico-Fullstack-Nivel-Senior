@@ -293,10 +293,13 @@ En la API en PostMan
 ## 📡 Endpoints Principales
 
 ```http
+POST http://localhost:3000/billing/generate-pendings
 POST   /billing/batch
 GET    /billing/batch/:id
 GET    /billing/batch/:id/erp-export
 POST   /seed
+POST http://localhost:3000/auth/login
+POST http://localhost:3000/seed
 ```
 
 ---
